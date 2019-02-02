@@ -3,36 +3,52 @@ Add package description here
 
 '''
 import argparse
+import logging
 import numpy as np
-import src
+from .src import *
 
-LOGGER = src.logger.LOGGER
+LOGGER = logging.getLogger("mylogger")
 
 PARSER = argparse.ArgumentParser()
-PARSER.add_argument('-f', action='store', nARGS=1, metavar='input.pdb', required=True,
+PARSER.add_argument('-f', action='store', nargs=1, metavar='input.pdb', required=True,
                     type=str, help='Input membrane structure file (pdb).')
-PARSER.add_argument('-o', action='store', nARGS=1, metavar='output.pdb', required=True,
+PARSER.add_argument('-o', action='store', nargs=1, metavar='output.pdb', required=True,
                     type=str, help='Output membrane structure file (pdb).')
-PARSER.add_argument('-t', action='store', nARGS=1, metavar='structure_target.pdb', required=True,
-                    type=str, help='Target molecule structure file (pdb).')
-PARSER.add_argument('-i', action='store', nARGS=1, metavar='edit_specifications.inp', required=True,
-                    type=str, help='File that contains a list of all atoms to be edited.')
-PARSER.add_argument('-s', action='store', nARGS=1, metavar='<molname to modify>', required=True,
+PARSER.add_argument('-t', action='store', nargs=1, metavar='structure_target.pdb/lipidname', required=True,
+                    type=str, help='Target molecule structure file (pdb) or name of lipid to switch to.')
+PARSER.add_argument('-i', action='store', nargs=1, metavar='edit_specifications.inp', required=False,
+                    type=str, help='File that contains a list of all atoms to be edited.'
+                                    ' Only needed for mode molecule')
+PARSER.add_argument('-s', action='store', nargs=1, metavar='<molname to modify>', required=True,
                     type=str, help='Name of molecule to change in source structure.\n'
-                    'Syntax is described in function "read_input_atom_specs".')
-PARSER.add_argument('-c', action='store', nARGS=1, metavar='<conc/%>', required=False,
+                                   'Syntax is described in function "read_input_atom_specs".')
+PARSER.add_argument('-c', action='store', nargs=1, metavar='<conc/%>', required=False,
                     type=int, help='Concentration of changed molecule per bilayer')
+PARSER.add_argument('-m', action='store', nargs=1, metavar='lipid/molecule', required=True,
+                    type=str, help='Sets mode: Either molecule changed using'
+                                    'structure files or swap known lipids')
+PARSER.add_argument('-v', action='count')
 ARGS = PARSER.parse_args()   ### Arguments can be taken via args.<flagname>
+MODE = ARGS.m[0]
 INP_FNAME = ARGS.f[0]
 OUT_FNAME = ARGS.o[0]
 TARGSTRUCT_FNAME = ARGS.t[0]
-EDITSPECS_FNAME = ARGS.i[0]
-MOLNAME = ARGS.s[0]
+MOLNAME_SRC = ARGS.s[0]
 ATMSEXPL = []
-try:
-    CONCENTRATION = ARGS.c[0]
-except TypeError:
-    CONCENTRATION = 100
+if MODE == 'lipids' and ARGS.i is not None:
+    LOGGER.warning("Warning: You gave edit specifications in -i with mode lipids."
+                   "This flag is not needed in this mode.")
+if MODE == 'molecules':
+    EDITSPECS_FNAME = ARGS.i[0]
+    try:
+        CONCENTRATION = ARGS.c[0]
+    except TypeError:
+        CONCENTRATION = 100
+
+#logger.set_verbosity(ARGS.v)
+print("in main", LOGGER.handlers)
+
+print(LOGGER.findCaller())
 
 def check_input():
     ''' Checks if input is valid. Raise Error if not.'''
@@ -70,14 +86,13 @@ def switch_molecules():
         Reads input pdb file, gather data of molecules to morph (in mol_pars)
         and passes data to class transform_coordinates
     '''
-    check_input()
-    inp_specs = src.read_input_atom_specs(EDITSPECS_FNAME)
+    inp_specs = read_input_atom_specs(EDITSPECS_FNAME)
     name_mapping = {}
     changed_mol_counter = 0
     unchanged_mol_counter = 0
     added_mols_total = 0
     count_atoms = 0
-    n_mols, n_atoms_mol = src.sysinfo.count_mols_of(MOLNAME, INP_FNAME)
+    n_mols, n_atoms_mol = sysinfo.count_mols_of(MOLNAME_SRC, INP_FNAME)
     n_mols_per_bilayer = n_mols//2
     # In the case that only one molecule is to be changed, counter, counter_atoms
     if not n_mols_per_bilayer:
@@ -97,7 +112,7 @@ def switch_molecules():
     refatm_src = inp_specs['source']
     refatm_targ = inp_specs['target']
 
-    struct_calc = src.ctrans.CoordinateTransformation(
+    struct_calc = ctrans.CoordinateTransformation(
         TARGSTRUCT_FNAME,
         refatm_src, refatm_targ,
         skip_tar=skip_tar, mapping=name_mapping)
@@ -115,14 +130,14 @@ def switch_molecules():
         mol_pars = {}   # {<atmname>:XYZ}
         for line in inpf:
 
-            regmatch = src.common.REGEX_PDB.match(line)
+            regmatch = common.REGEX_PDB.match(line)
             if regmatch:
                 grps = regmatch.groups()
                 serial, atom_str, atom_int, resname, resid, x, y, z, other = grps
                 atom = atom_str+atom_int    # letter and number of atomnames are handled differently
 
                 # Start working on molecule or first molecule is already target:
-                if resname_old == MOLNAME or (resname_old is None and resname == MOLNAME):
+                if resname_old == MOLNAME_SRC or (resname_old is None and resname == MOLNAME_SRC):
                     resid = int(resid)
                     xyz = np.array([float(val) for val in [x, y, z]])
                     mol_pars[atom] = xyz
@@ -174,7 +189,7 @@ def switch_molecules():
                 resid_old = resid
             else:
                  #Last calculation and no other residues come after
-                if resname_old == MOLNAME and added_mols_total < n_mols:
+                if resname_old == MOLNAME_SRC and added_mols_total < n_mols:
                     if changed_mol_counter < mols_to_change:
                         LOGGER.info("Added %s mols and %s totals", n_mols, added_mols_total,)
                         LOGGER.info("Add %s - changed %s , unchanged %s",
@@ -185,10 +200,20 @@ def switch_molecules():
                 else:
                     print(line, file=outf, end='')
 
-def switch_lipidtails():
-    ''' Transform lipid tails '''
+def switch_lipids():
+    '''
+        Switches lipid types of input structure and write modified structure file
+            --By now only switches of longer to shorter chains are implemented.
+                * No switching of short to long lipid chain
+                * No switching of heads
+
+    '''
+    new_lipid_lines = []
+    swappair_resnames = [MOLNAME_SRC, TARGSTRUCT_FNAME]
+    LOGGER.info("Switching %s to %s", MOLNAME_SRC, TARGSTRUCT_FNAME)
+    print(LOGGER.handlers)
     # Get all residues that are to be changed
-    resids_to_change = src.sysinfo.radial_select(INP_FNAME)
+    resids_to_change = sysinfo.radial_select(INP_FNAME, MOLNAME_SRC)
     # Read whole gro file
     with open(INP_FNAME, "r") as fgro:
         grodata = fgro.readlines()
@@ -196,26 +221,52 @@ def switch_lipidtails():
     # otherwise print to OUT_FNAME
     with open(OUT_FNAME, "w") as outf:
         resid_old = None
+        resname_old = None
         molecule = None
         for line in grodata:
-            match =  src.common.REGEXP_GRO.match(line)
+            match =  common.REGEXP_GRO.match(line)
             if match:
                 grps = match.groups()
-                resid = grps[1]
-                if resid_old != resid:# All information for resid_old gathered
+                resid = int(grps[0])
+                resname = grps[1].strip()
+                if resid_old != resid and resname == MOLNAME_SRC:# All information for resid_old gathered
+                    resid_old = resid
                     if molecule is not None:# For first molecule
-                        molecule.add_mol(outf)
-                    molecule = src.coordtransformation.Molecule()
+                        lipidlines = molecule.add_mol()
+                        new_lipid_lines += lipidlines
+                    molecule = ctrans.Molecule(swappair_resnames)
+                if resname_old != resname:
+                    print(resname_old)
+                    if resname_old == MOLNAME_SRC:
+                        print("PRINT LINES HERE")
+                        for mol_entry in new_lipid_lines:
+                            print(mol_entry, file=outf)
+                    resname_old = resname
+                    print(resname_old, "\n")
                 if resid in resids_to_change:
                     molecule.update_info(grps)
                 else:
-                    if molecule is not None and not molecule.finished:
-                        # If last residue not in resid to change
-                        molecule.add_mol(outf)
+                    #if molecule is not None and not molecule.finished:
+                    #    # If last residue not in resid to change
+                    #    molecule.add_mol(outf)
                     # Print all lines until we get to new residue
-                    print(line, file=outf)
+                    print(line, file=outf, end='')
             else:#Does not match if no atom entry
                 # If last residue not in resid to change
-                if molecule is not None and not molecule.finished:
-                    molecule.add_mol(outf)
-                print(line, file=outf)
+                if molecule is not None:
+                    LOGGER.debug("Adding last molecule")
+                    print("ADDING LAST")
+                    print(molecule.finished)
+                    lipidlines = molecule.add_mol()
+                    if lipidlines:
+                        new_lipid_lines.append(lipidlines)
+                        for mol_entry in new_lipid_lines:
+                            print(mol_entry, file=outf)
+
+                print(line, file=outf, end='')
+
+check_input()
+if MODE == 'lipid':
+    switch_lipids()
+elif MODE == 'molecule':
+    switch_molecules()

@@ -1,12 +1,12 @@
 '''
     Extracts information about system from given *.gro or *.pdb file.
 '''
+import logging
 import numpy as np
 import MDAnalysis as mda
 from bilana import lipidmolecules
 from .common import REGEX_PDB, REGEXP_GRO
-from .logger import LOGGER
-
+LOGGER = logging.getLogger("mylogger")
 
 def count_mols_of(molname, struct_file_source):
     ''' Count how many molecules of type <molname> are in source structure (specified in -f) '''
@@ -103,8 +103,12 @@ def lipid_leaflet_assignment(grofilename, solvent='TIP3'):
     return leafleat_assign
 
 
-def radial_select(grofilename):
-    ''' Returns list of resids inside a radial area with radius r around membrane center '''
+def radial_select(grofilename, mol_to_change, boxdivisor=3):
+    '''
+    Returns list of resids inside a radial area with radius box_x/boxdivisor around membrane center
+    boxdivisor: Factor by which the box edge should be divided - default radius is one
+                third of box.
+    '''
     uni = mda.Universe(grofilename)
     resnames = set(uni.atoms.resnames)
     solvent_mols = []
@@ -114,16 +118,23 @@ def radial_select(grofilename):
             solvent_mols.append(solvent)
         except KeyError:
             continue
+    LOGGER.debug("Solvent molecules %s", solvent_mols)
+    if solvent_mols is None:
+        solvent_mols = ''
     memb_sel = uni.select_atoms("resname {}".format(' '.join(resnames)))
     box = uni.dimensions
     membcenter = memb_sel.center_of_mass()
+    LOGGER.debug("Box dimensions: %s", box)
+    LOGGER.debug("Membrane center: %s", membcenter)
 
     #2 Get resids that are within r=thirdx around <membcenter>
+    LOGGER.info("Getting list of resids within %s/%s of membrane center", box[0], boxdivisor)
     halfz = box[2]/2
-    thirdx = box[0]/3
+    thirdx = box[0]/boxdivisor
     membcenter_str = "{} {} {}".format(*membcenter)
-    raft_atoms = uni.select_atoms("same residue as (cyzone {0} {1} -{1} (point {2} 10))"
-                                  "and not resname {3} "\
-                                  .format(thirdx, halfz, membcenter_str, ' '.join(solvent_mols)))
+    LOGGER.debug("thirdx: %s, halfz %s, membcenter_str %s solvent_mols %s", thirdx, halfz, membcenter_str, solvent_mols)
+    selection_str = "same residue as (cyzone {0} {1} -{1} (point {2} 10)) and resname {3}".format(thirdx, halfz, membcenter_str, mol_to_change)
+    raft_atoms = uni.select_atoms(selection_str)
     raft_atoms.write("molecules_in_raft.gro")
+    LOGGER.debug("Raft atom object: %s and number of resids %s", set(raft_atoms.resids), len(set(raft_atoms.resids)))
     return list(set(raft_atoms.resids))
