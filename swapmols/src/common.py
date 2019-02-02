@@ -29,7 +29,7 @@ REGEX_PDB = re.compile(PDB_PATTERN)
 
 
 #                     resid resnm atmnm atmnr   x        y         z         vx      vy        vz
-GRO_STRING_FORMAT = '{: >5}{: <5}{: >5}{: >5}{: >8.3f}{: >8.3f}{: >8.3f}{: >8.4f}{: >8.4f}{: >8.4f} '
+GRO_STRING_FORMAT = '{: >5}{: <5}{: >5}{: >5}{: >8.3f}{: >8.3f}{: >8.3f}'#{: >8.4f}{: >8.4f}{: >8.4f} '
 GRO_PATTERN = r"""
 ([\s,\d]{5})           (?# Resid       Grp 1)
 ([\s,\w]{5})           (?# Resname     Grp 2)
