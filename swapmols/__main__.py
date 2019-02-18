@@ -35,10 +35,10 @@ OUT_FNAME = ARGS.o[0]
 TARGSTRUCT_FNAME = ARGS.t[0]
 MOLNAME_SRC = ARGS.s[0]
 ATMSEXPL = []
-if MODE == 'lipids' and ARGS.i is not None:
+if MODE == 'lipid' and ARGS.i is not None:
     LOGGER.warning("Warning: You gave edit specifications in -i with mode lipids."
                    "This flag is not needed in this mode.")
-if MODE == 'molecules':
+if MODE == 'molecule':
     EDITSPECS_FNAME = ARGS.i[0]
     try:
         CONCENTRATION = ARGS.c[0]
@@ -211,7 +211,6 @@ def switch_lipids():
     new_lipid_lines = []
     swappair_resnames = [MOLNAME_SRC, TARGSTRUCT_FNAME]
     LOGGER.info("Switching %s to %s", MOLNAME_SRC, TARGSTRUCT_FNAME)
-    print(LOGGER.handlers)
     # Get all residues that are to be changed
     resids_to_change = sysinfo.radial_select(INP_FNAME, MOLNAME_SRC)
     # Read whole gro file
