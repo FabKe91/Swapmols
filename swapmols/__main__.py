@@ -7,7 +7,8 @@ import logging
 import numpy as np
 from .src import *
 
-LOGGER = logging.getLogger("mylogger")
+LOGGER = logging.getLogger("Swapmols.__main__")
+SH, FH = mylogger.add_handlers(LOGGER)
 
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument('-f', action='store', nargs=1, metavar='input.pdb', required=True,
@@ -45,10 +46,8 @@ if MODE == 'molecule':
     except TypeError:
         CONCENTRATION = 100
 
-#logger.set_verbosity(ARGS.v)
-print("in main", LOGGER.handlers)
+mylogger.set_verbosity(ARGS.v, SH)
 
-print(LOGGER.findCaller())
 
 def check_input():
     ''' Checks if input is valid. Raise Error if not.'''
@@ -213,6 +212,25 @@ def switch_lipids():
     LOGGER.info("Switching %s to %s", MOLNAME_SRC, TARGSTRUCT_FNAME)
     # Get all residues that are to be changed
     resids_to_change = sysinfo.radial_select(INP_FNAME, MOLNAME_SRC)
+    leaflet_assignment = sysinfo.lipid_leaflet_assignment("molecules_in_raft.gro")
+    count = {0:0, 1:0}
+    lipids_in_leaflet = {0:[], 1:[]}
+    for key, val in leaflet_assignment.items():
+        count[val] += 1
+        lipids_in_leaflet[val].append(key)
+    LOGGER.debug("Count: 0:%s  1:%s", count[0], count[1])
+    if count[0] != count[1]:
+        diff = count[0] - count[1]
+        LOGGER.info("Bilayers not symmetric. Difference is %s", diff)
+        LOGGER.info("Resids before: %s", resids_to_change)
+        if diff < 0:
+            del_resids = lipids_in_leaflet[1][diff:]
+        elif diff > 0:
+            del_resids = lipids_in_leaflet[0][diff*-1:]
+        LOGGER.info("Deleting %s", del_resids)
+        for i in del_resids:
+            resids_to_change.remove(i)
+        LOGGER.info("Resids after: %s", resids_to_change)
     # Read whole gro file
     with open(INP_FNAME, "r") as fgro:
         grodata = fgro.readlines()
@@ -237,7 +255,7 @@ def switch_lipids():
                 if resname_old != resname:
                     print(resname_old)
                     if resname_old == MOLNAME_SRC:
-                        print("PRINT LINES HERE")
+                        LOGGER.info("Adding new molecules after %s and before %s", resname_old, resname)
                         for mol_entry in new_lipid_lines:
                             print(mol_entry, file=outf)
                     resname_old = resname
@@ -254,8 +272,6 @@ def switch_lipids():
                 # If last residue not in resid to change
                 if molecule is not None:
                     LOGGER.debug("Adding last molecule")
-                    print("ADDING LAST")
-                    print(molecule.finished)
                     lipidlines = molecule.add_mol()
                     if lipidlines:
                         new_lipid_lines.append(lipidlines)
