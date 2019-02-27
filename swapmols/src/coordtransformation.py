@@ -8,7 +8,7 @@ import numpy as np
 from .common import REGEX_PDB, PDB_REC, GRO_STRING_FORMAT
 from bilana import lipidmolecules
 
-LOGGER = logging.getLogger("mylogger")
+LOGGER = logging.getLogger("Swapmols.coordtransformation")
 
 class CoordinateTransformation():
     ''' Class for handling all coordinate transformation calculations

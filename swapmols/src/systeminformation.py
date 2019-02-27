@@ -6,7 +6,7 @@ import numpy as np
 import MDAnalysis as mda
 from bilana import lipidmolecules
 from .common import REGEX_PDB, REGEXP_GRO
-LOGGER = logging.getLogger("mylogger")
+LOGGER = logging.getLogger("Swapmols.systeminformation")
 
 def count_mols_of(molname, struct_file_source):
     ''' Count how many molecules of type <molname> are in source structure (specified in -f) '''
@@ -64,7 +64,7 @@ def lipid_leaflet_assignment(grofilename, solvent='TIP3'):
                     old_resid = resid
                 resname = match.group(2).split()[0].upper()
                 atomname = match.group(3).split()[0]
-                coords = [float(i) for i in match.group(5).split()]
+                coords = [float(i) for i in match.group(5, 6, 7)]
                 #logger.debug("Linepars: %s %s %s %s", resid, resname, atomname, coords)
                 if resname == solvent:
                     continue
