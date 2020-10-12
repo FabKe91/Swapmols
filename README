@@ -1,0 +1,6 @@
+
+[ installation ]
+pip install --user -e .
+
+[ execution ]
+python -m swapmols -f ... -o ...

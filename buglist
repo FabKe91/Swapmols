@@ -1,0 +1,4 @@
+logging doesnt work properly because of bilana
+
+ First line after changed molecule entry is not printed
+ First line of first changed molecule of second bilayer is skipped

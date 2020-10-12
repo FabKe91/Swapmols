@@ -1,0 +1,4 @@
+__pycache__
+*.txt
+PKG-INFO
+zip-safe
