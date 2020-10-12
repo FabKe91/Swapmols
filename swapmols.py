@@ -350,6 +350,8 @@ def main():
                                 resid_old, changed_mol_counter, unchanged_mol_counter)
                             unchanged_mol_counter += 1
                             count_atoms = 0
+                            if resname == MOLNAME:
+                                print(line, file=outf, end='')
                         else:
                             print(line, file=outf, end='')
                             count_atoms += 1
@@ -374,6 +376,8 @@ def main():
                             struct_calc.add_molecule(outf, resid_old, mol_pars)
                             changed_mol_counter += 1
                             mol_pars = {}
+                    if resid_old != resid and not first and resname != MOLNAME:
+                        print(line, file=outf, end='')
 
                     first = False
                     resname_old = resname
