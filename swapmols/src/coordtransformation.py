@@ -6,7 +6,13 @@
 import logging
 import numpy as np
 from .common import REGEX_PDB, PDB_REC, GRO_STRING_FORMAT
-from bilana import lipidmolecules
+#from bilana import lipidmolecules # FIND AN ALTERNATIVE
+
+
+def is_sterol(resname):
+    sterolnames = ["CHL1", "ERG", "ERGO"]
+    return resname in sterolnames
+
 
 LOGGER = logging.getLogger("Swapmols.coordtransformation")
 
@@ -225,11 +231,11 @@ class Molecule():
         def allequal(lst):
             return lst[1:] == lst[:-1]
         swapdict = {}
-        is_sterol = {}
+        steroldict = {}
         sterol_in_pair = False
         for i, lip in enumerate(swappair):
-            sterol = lipidmolecules.is_sterol(lip)
-            is_sterol[i] = sterol
+            sterol = is_sterol(lip)
+            steroldict[i] = sterol
             if sterol:
                 sterol_in_pair = True
         if sterol_in_pair:
@@ -249,6 +255,7 @@ class Molecule():
 
     def _swapchains(self, swappair):
         ''' Managing the swap of chains from swappair'''
+        raise NotImplementedError("This function is broken implement list of tail atoms")
         def convert_to_hdict(hydrogenlist):
             '''
                 Converts hydrogen entries like H14S to {number:identifier}
@@ -265,10 +272,11 @@ class Molecule():
                 converter[number].append(hydr)
             return converter
         chaindict = {}
-        tailcarbons_lip1 = lipidmolecules.tailcarbons_of(swappair[0])
-        tailcarbons_lip2 = lipidmolecules.tailcarbons_of(swappair[1])
-        tailhydr_lip1    = lipidmolecules.tailhydr_of(swappair[0])
-        tailhydr_lip2    = lipidmolecules.tailhydr_of(swappair[1])
+        ## THIS IS MISSING!!!
+        #tailcarbons_lip1 = lipidmolecules.tailcarbons_of(swappair[0])
+        #tailcarbons_lip2 = lipidmolecules.tailcarbons_of(swappair[1])
+        #tailhydr_lip1    = lipidmolecules.tailhydr_of(swappair[0])
+        #tailhydr_lip2    = lipidmolecules.tailhydr_of(swappair[1])
         if len(tailcarbons_lip1) == len(tailcarbons_lip2):# Check wether both lipids have two chains
             for chain, carbonlist_lip1 in enumerate(tailcarbons_lip1):
                 hydr1_dict = convert_to_hdict(tailhydr_lip1[chain])

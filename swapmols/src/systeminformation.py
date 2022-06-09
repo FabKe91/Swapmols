@@ -4,7 +4,7 @@
 import logging
 import numpy as np
 import MDAnalysis as mda
-from bilana import lipidmolecules
+#from bilana import lipidmolecules
 from .common import REGEX_PDB, REGEXP_GRO
 LOGGER = logging.getLogger("Swapmols.systeminformation")
 
@@ -50,6 +50,7 @@ def lipid_leaflet_assignment(grofilename, solvent='TIP3'):
         Reads grofile, searches all lipids and returns a dictionary
         assigning lipids to upper or lower leaflet
     '''
+    raise NotImplementedError("Missing lipidmolecules class from bilana. Needs to be reimplemented.")
     leafleat_assign = {}
     coord_head = coord_base = None
     with open(grofilename, "r") as gfile:
@@ -68,7 +69,7 @@ def lipid_leaflet_assignment(grofilename, solvent='TIP3'):
                 #logger.debug("Linepars: %s %s %s %s", resid, resname, atomname, coords)
                 if resname == solvent:
                     continue
-                last_tail_atm = lipidmolecules.scd_tail_atoms_of(resname)[0][-1]
+                #last_tail_atm = lipidmolecules.scd_tail_atoms_of(resname)[0][-1]
                 LOGGER.debug("Atmn/last_tail %s/%s", atomname, last_tail_atm)
                 if old_resid != resid:
                     LOGGER.debug("Resid/resname/atmname %s/%s/%s", resid, resname, atomname)
@@ -84,9 +85,9 @@ def lipid_leaflet_assignment(grofilename, solvent='TIP3'):
                     leafleat_assign[old_resid] = leaflet
                     old_resid = resid
                     coord_head = coord_base = None
-                if atomname in lipidmolecules.CENTRAL_ATOM_OF.values():
-                    coord_head = np.array(coords)
-                    LOGGER.debug("Added head %s", atomname)
+                #if atomname in lipidmolecules.CENTRAL_ATOM_OF.values():
+                #    coord_head = np.array(coords)
+                #    LOGGER.debug("Added head %s", atomname)
                 if atomname == last_tail_atm:
                     coord_base = np.array(coords)
                     LOGGER.debug("Added tail %s", atomname)

@@ -1,4 +1,4 @@
-logging doesnt work properly because of bilana
+logging doesnt work properly
 
  First line after changed molecule entry is not printed
- First line of first changed molecule of second bilayer is skipped
+ First line of first changed molecule of second bilayer leaflet is skipped

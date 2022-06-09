@@ -1,6 +1,6 @@
 
 [ installation ]
-pip install --user -e .
+python3 -m pip install --user -e .
 
 [ execution ]
 python -m swapmols -f ... -o ...
